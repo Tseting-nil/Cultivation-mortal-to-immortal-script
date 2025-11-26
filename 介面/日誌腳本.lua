@@ -4,14 +4,32 @@
 local LogSystem = {}
 
 -- 創建新的日誌系統實例
-function LogSystem.new(ReGui, config)
+function LogSystem.new(ReGui, config, language)
 	config = config or {}
+	language = language or "tw"  -- 預設為繁體中文
 	
 	local self = {}
 	
+	-- 語言文本配置
+	local texts = {
+		tw = {
+			Title = "更新日誌",
+			Announcement = "📢 公告",
+			Date = "📅 "
+		},
+		en = {
+			Title = "Update Log",
+			Announcement = "📢 Announcement",
+			Date = "📅 "
+		}
+	}
+	
+	-- 設定當前語言文本
+	self.texts = texts[language] or texts.tw
+	
 	-- 創建視窗
 	self.Window = ReGui:Window({
-		Title = config.Title or "更新日誌",
+		Title = config.Title or self.texts.Title,
 		Size = config.Size or UDim2.fromOffset(700, 500),
 		NoTabs = true,
 		NoCollapse = true,
@@ -59,7 +77,7 @@ function LogSystem.new(ReGui, config)
 	function self:AddAnnouncement(text, color, size)
 		self.Window:Separator()
 		self.Window:Label({
-			Text = "📢 公告",
+			Text = self.texts.Announcement,
 			TextSize = 24,
 			Font = Enum.Font.GothamBold,
 			TextColor3 = Color3.fromRGB(255, 225, 140),
@@ -88,7 +106,7 @@ function LogSystem.new(ReGui, config)
 		if self.LastDate ~= date then
 			self.LastDate = date
 			self.Window:Label({
-				Text = "📅 " .. date,
+				Text = self.texts.Date .. date,
 				TextSize = 22,
 				Font = Enum.Font.GothamBold,
 				TextColor3 = Color3.fromRGB(120, 255, 138)
