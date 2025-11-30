@@ -44,8 +44,8 @@ loadstring(game:HttpGet("https://gist.githubusercontent.com/Tseting-nil/98c9e593
 * 宗門(公會) - 自動捐獻、自動購買公會商店腳本 (額外腳本)
 * 統計 (每秒即殺, 每秒金幣)
 * 快速開啟遊戲介面 (UI)
-##  <font color=#FF0000> 新功能 :</font>
-* [自動儲存]()
+##  <font color=#FF0000> 新功能 :</font>  [功能說明](說明文檔.md)
+* 自動儲存
 * 自動加載
 * 地下城功能進階設置
 * 自動抽法寶/技能進階設置

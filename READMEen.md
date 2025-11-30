@@ -43,8 +43,8 @@ Supports two languages (English, Chinese)
 * Guild (Sect) - Auto-donation, Auto-purchase guild shop scripts (extra script)
 * Statistics (Kills per second, Coins per second)
 * Quick access to game interface (UI)
-##  <font color=#FF0000> New Features :</font>
-* [Auto-Save]()
+##  <font color=#FF0000> New Features :</font> [Function Description](說明文檔_en.md)
+* Auto-Save
 * Auto-Load
 * Advanced dungeon settings
 * Advanced artifact/skill draw settings
