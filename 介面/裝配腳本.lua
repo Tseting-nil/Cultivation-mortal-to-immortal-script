@@ -4,7 +4,7 @@ local HttpService = game:GetService("HttpService")
 local saveFilename = "Tsetingnil_script/Cultivation/Equip_cfg.json"
 
 -- 載入 ReGui
-local ReGui = loadstring(game:HttpGet('https://raw.githubusercontent.com/depthso/Dear-ReGui/refs/heads/main/ReGui.lua'))()
+local ReGui = loadstring(game:HttpGet('https://gist.githubusercontent.com/Tseting-nil/169b7303e1418cb301bad5ab427e9351/raw/52b66144f1e520a4f840c01a6f95d7fe4421bd50/GUI:ReGui'))()
 -- 載入側邊訊息模組
 local Msg = loadstring(game:HttpGet('https://raw.githubusercontent.com/Tseting-nil/Cultivation-mortal-to-immortal-script/refs/heads/main/%E5%81%B4%E9%82%8A%E8%A8%8A%E6%81%AF%E6%A8%A1%E7%B5%84.lua'))()
 -- 建立主視窗

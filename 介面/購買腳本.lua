@@ -1,5 +1,5 @@
 -- 外部庫載入
-local ReGui = loadstring(game:HttpGet('https://raw.githubusercontent.com/depthso/Dear-ReGui/refs/heads/main/ReGui.lua'))()
+local ReGui = loadstring(game:HttpGet('https://gist.githubusercontent.com/Tseting-nil/169b7303e1418cb301bad5ab427e9351/raw/52b66144f1e520a4f840c01a6f95d7fe4421bd50/GUI:ReGui'))()
 local Msg = loadstring(game:HttpGet('https://gist.githubusercontent.com/Tseting-nil/08653e6aa9fc12a9f097bfb10e6654e7/raw/1cb8f4efec92cb1735e85bb7d1d0761ec2dab685/%25E5%2581%25B4%25E9%2582%258A%25E9%2580%259A%25E7%259F%25A5%25E6%25A8%25A1%25E7%25B5%2584.lua'))()
 
 -- 遊戲服務和GUI元素
