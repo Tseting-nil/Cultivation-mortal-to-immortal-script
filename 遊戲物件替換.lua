@@ -296,6 +296,12 @@ local TaskConfig = {
 			path = {"主角","背景","右侧界面","小绿瓶","祝福","列表"},
 			target = "祝福预制体",
 			prefix = "Blessing"
+		},
+    {
+			name = "成就",
+			path = {"主角","背景","右侧界面","成就","成就","列表"},
+			target = "成就行预制体",
+			prefix = "Achievement"
 		}
 	},
     
