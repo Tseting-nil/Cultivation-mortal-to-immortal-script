@@ -268,24 +268,6 @@ local TaskConfig = {
 			prefix = "mail"
 		},
 		{
-			name = "活動商品",
-			path = {"节日活动商店","背景","右侧界面","兑换","列表"},
-			target = "活动商品预制体",
-			prefix = "eventcommodity"
-		},
-		{
-			name = "公會商店",
-			path = {"公会","背景","右侧界面","商店","列表"},
-			target = "活动商品预制体",
-			prefix = "Guildshopitem"
-		},
-		{
-			name = "競技場商店",
-			path = {"竞技场","背景","右侧界面","商店","列表"},
-			target = "活动商品预制体",
-			prefix = "Arenashopitem"
-		},
-		{
 			name = "世界BOSS",
 			path = {"关卡选择","背景","右侧界面","世界boss","列表"},
 			target = "世界boss关卡预制体",
