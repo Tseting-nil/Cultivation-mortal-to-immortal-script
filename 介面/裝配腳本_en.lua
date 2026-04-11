@@ -3,10 +3,14 @@ local playerGui = player:WaitForChild("PlayerGui")
 local HttpService = game:GetService("HttpService")
 local saveFilename = "Tsetingnil_script/Cultivation/Equip_cfg.json"
 
--- 載入 ReGui
-local ReGui = loadstring(game:HttpGet('https://gist.githubusercontent.com/Tseting-nil/169b7303e1418cb301bad5ab427e9351/raw/5917b71b4eb126d1e5e8f9f314d01d8080cafd44/GUI:ReGui'))()
--- 載入側邊訊息模組
-local Msg = loadstring(game:HttpGet('https://raw.githubusercontent.com/Tseting-nil/Cultivation-mortal-to-immortal-script/refs/heads/main/%E5%81%B4%E9%82%8A%E8%A8%8A%E6%81%AF%E6%A8%A1%E7%B5%84.lua'))()
+-- 外部庫載入
+local ReGui = loadstring(game:HttpGet("https://gist.githubusercontent.com/Tseting-nil/169b7303e1418cb301bad5ab427e9351/raw/8dfc8c5dcb9d3ea611ce4a3b597ce01af27614a0/GUI:ReGui"))()
+
+if not getgenv().NotificationModule then
+	loadstring(game:HttpGet("https://gist.githubusercontent.com/Tseting-nil/08653e6aa9fc12a9f097bfb10e6654e7/raw/00001d614d928fc5dafce59133a012dd78419afd/%25E5%2581%25B4%25E9%2582%258A%25E9%2580%259A%25E7%259F%25A5%25E6%25A8%25A1%25E7%25B5%2584.lua"))()
+end
+local Msg = getgenv().NotificationModule
+
 -- 建立主視窗
 local Window = ReGui:TabsWindow({
 	Title = "Equipment Configuration Script",
@@ -39,41 +43,18 @@ local SettingsContent = SettingsTab:ScrollingCanvas({
 
 -- 使用裝備配置
 local function UseConfig(Equip, Skill, Relic, Rune, Tree, Sword)
-    -- 切換裝備組
-	local args = {
-		[1] = Equip
-	}
-	game:GetService("ReplicatedStorage"):FindFirstChild("\228\186\139\228\187\182"):FindFirstChild("\229\133\172\231\148\168"):FindFirstChild("\232\163\133\229\164\135"):FindFirstChild("\229\136\135\230\141\162\232\163\133\229\164\135\231\187\132"):FireServer(unpack(args))
-    
-    -- 切換技能組
-	local args = {
-		[1] = Skill
-	}
-	game:GetService("ReplicatedStorage"):FindFirstChild("\228\186\139\228\187\182"):FindFirstChild("\229\133\172\231\148\168"):FindFirstChild("\230\138\128\232\131\189"):FindFirstChild("\229\136\135\230\141\162\232\163\133\229\164\135\231\187\132"):FireServer(unpack(args))
-    
-    -- 切換遺物組
-	local args = {
-		[1] = Relic
-	}
-	game:GetService("ReplicatedStorage"):FindFirstChild("\228\186\139\228\187\182"):FindFirstChild("\229\133\172\231\148\168"):FindFirstChild("\233\129\151\231\137\169"):FindFirstChild("\229\136\135\230\141\162\232\163\133\229\164\135\231\187\132"):FireServer(unpack(args))
-    
-    -- 切換符文組
-	local args = {
-		[1] = Rune
-	}
-	game:GetService("ReplicatedStorage"):FindFirstChild("\228\186\139\228\187\182"):FindFirstChild("\229\133\172\231\148\168"):FindFirstChild("\233\152\181\230\179\149"):FindFirstChild("\229\136\135\230\141\162\232\163\133\229\164\135\231\187\132"):FireServer(unpack(args))
-    
-    -- 切換世界樹組
-	local args = {
-		[1] = Tree
-	}
-	game:GetService("ReplicatedStorage"):FindFirstChild("\228\186\139\228\187\182"):FindFirstChild("\229\133\172\231\148\168"):FindFirstChild("\228\184\150\231\149\140\230\160\145"):FindFirstChild("\229\136\135\230\141\162\232\163\133\229\164\135\231\187\132"):FireServer(unpack(args))
-    
-    -- 切換劍雕像
-	local args = {
-		[1] = Sword
-	}
-	game:GetService("ReplicatedStorage"):FindFirstChild("\228\186\139\228\187\182"):FindFirstChild("\229\133\172\231\148\168"):FindFirstChild("\229\137\145\233\155\149\229\131\143"):FindFirstChild("\229\136\135\230\141\162\231\187\132"):FireServer(unpack(args))
+  -- 切換裝備組
+  game:GetService("ReplicatedStorage"):FindFirstChild("\228\186\139\228\187\182"):FindFirstChild("\229\133\172\231\148\168"):FindFirstChild("\232\163\133\229\164\135"):FindFirstChild("\229\136\135\230\141\162\232\163\133\229\164\135\231\187\132"):FireServer(Equip)
+	-- 切換技能組
+  game:GetService("ReplicatedStorage"):FindFirstChild("\228\186\139\228\187\182"):FindFirstChild("\229\133\172\231\148\168"):FindFirstChild("\230\138\128\232\131\189"):FindFirstChild("\229\136\135\230\141\162\232\163\133\229\164\135\231\187\132"):FireServer(Skill)
+  -- 切換遺物組
+  game:GetService("ReplicatedStorage"):FindFirstChild("\228\186\139\228\187\182"):FindFirstChild("\229\133\172\231\148\168"):FindFirstChild("\233\129\151\231\137\169"):FindFirstChild("\229\136\135\230\141\162\232\163\133\229\164\135\231\187\132"):FireServer(Relic)
+  -- 切換符文組
+  game:GetService("ReplicatedStorage"):FindFirstChild("\228\186\139\228\187\182"):FindFirstChild("\229\133\172\231\148\168"):FindFirstChild("\233\152\181\230\179\149"):FindFirstChild("\229\136\135\230\141\162\232\163\133\229\164\135\231\187\132"):FireServer(Rune)
+  -- 切換世界樹組
+  game:GetService("ReplicatedStorage"):FindFirstChild("\228\186\139\228\187\182"):FindFirstChild("\229\133\172\231\148\168"):FindFirstChild("\228\184\150\231\149\140\230\160\145"):FindFirstChild("\229\136\135\230\141\162\232\163\133\229\164\135\231\187\132"):FireServer(Tree)
+  -- 切換劍雕像
+  game:GetService("ReplicatedStorage"):FindFirstChild("\228\186\139\228\187\182"):FindFirstChild("\229\133\172\231\148\168"):FindFirstChild("\229\137\145\233\155\149\229\131\143"):FindFirstChild("\229\136\135\230\141\162\231\187\132"):FireServer(Sword)
 end
 
 -- 單選 Radiobox 群組函數
@@ -478,5 +459,6 @@ SettingsContent:Button({
 		end
 	end
 })
+
 -- 啟動時讀取配置
 LoadConfig()
