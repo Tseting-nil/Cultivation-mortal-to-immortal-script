@@ -45,6 +45,7 @@ local Scripttable = {
 		EventShopTab = {
 			Enabled = false,
 			Select_ID = nil,
+			BuyInterval = 0.1,
 		},
 		ArenaShopTab = {
 			Enabled = false,
@@ -614,13 +615,24 @@ Scripttable.GUI.EventShopTab.EventsShopRadiobox = Scripttable.GUI.EventShopTab.E
 					return
 				end
 				Mainfunction.BuyShopItem("eventshop", "Checkbox")
-				task.wait(0.1)
+				task.wait(Scripttable.GUI.EventShopTab.BuyInterval)
 			end
 		end)
 	end,
 })
 
 -- 活動商店功能按鈕
+EventsShopContent:SliderFloat({
+	Label = "購買間隔 (秒)",
+	Value = 0.1,
+	Minimum = 0.1,
+	Maximum = 2.0,
+	Format = "%.1f 秒",
+	Callback = function(_, value)
+		Scripttable.GUI.EventShopTab.BuyInterval = value
+	end,
+})
+
 local eventShopButtons = {
 	"刷新時間",
 	"購買商品"

@@ -45,6 +45,7 @@ local Scripttable = {
 		EventShopTab = {
 			Enabled = false,
 			Select_ID = nil,
+			BuyInterval = 0.1,
 		},
 		ArenaShopTab = {
 			Enabled = false,
@@ -159,7 +160,7 @@ Mainfunction.SaveGuildShopconfig = function()
   if success then
     Msg:Success("Config saved", 3)
   else
-    warn("儲存失敗: " .. tostring(err), 3)
+    warn("Save failed: " .. tostring(err), 3)
   end
 end
 
@@ -191,7 +192,7 @@ Mainfunction.LoadGuildShopconfig = function()
       end
     end
   else
-    warn("載入失敗: " .. tostring(result), 3)
+    warn("Load failed: " .. tostring(result), 3)
   end
 end
 
@@ -206,7 +207,7 @@ Mainfunction.DeleteGuildShopconfig = function()
   if success then
     Msg:Success("Configuration deleted", 3)
   else
-    warn("刪除失敗: " .. tostring(err), 3)
+    warn("Delete failed: " .. tostring(err), 3)
   end
 end
 
@@ -379,7 +380,7 @@ Mainfunction.BuyShopItem = function(shoptype, type)
 						end
 					end
 				else
-					Msg:Error(entry.name .. " | No Stock")
+					Msg:Error(translatedName .. " | No Stock")
 					if type == "Checkbox" then
 						tab.Enabled = false
 						radiobox:SetValue(false)
@@ -507,9 +508,9 @@ Mainfunction.Upd_Select = function(shoptype)
 		for _, item in ipairs(shopItems) do
 			if tostring(item.price) == entry.price then
 				if item.stock > 0 then
-					tab.ChoosenItem_Label.Text = "Selected: " .. entry.name .. " | Stock: " .. string.format("%02d", item.stock) .. " | Price: " .. item.price
+					tab.ChoosenItem_Label.Text = "Selected: " .. Mainfunction.Translationtable(entry.name) .. " | Stock: " .. string.format("%02d", item.stock) .. " | Price: " .. item.price
 				else
-					tab.ChoosenItem_Label.Text = "Selected: " .. entry.name .. " | No Stock"
+					tab.ChoosenItem_Label.Text = "Selected: " .. Mainfunction.Translationtable(entry.name) .. " | No Stock"
 				end
 			end
 		end
@@ -573,7 +574,8 @@ Scripttable.GUI.EventShopTab.EventsShop_Key_Combo = EventsShopContent:Combo({
 			if stock == "--" then
 				Scripttable.GUI.EventShopTab.ChoosenItem_Label.Text = "Selected: " .. name .. " | No Stock"
 			end
-			local ID = Scripttable.EventItemid[name] and Scripttable.EventItemid[name][tostring(price)]
+			local chineseName = Mainfunction.Translationtable(name)
+			local ID = Scripttable.EventItemid[chineseName] and Scripttable.EventItemid[chineseName][tostring(price)]
 			Scripttable.GUI.EventShopTab.Select_ID = ID
 		end
 	end,
@@ -592,7 +594,8 @@ Scripttable.GUI.EventShopTab.EventsShop_Item_Combo = EventsShopContent:Combo({
 			if stock == "--" then
 				Scripttable.GUI.EventShopTab.ChoosenItem_Label.Text = "Selected: " .. name .. " | No Stock"
 			end
-			local ID = Scripttable.EventItemid[name] and Scripttable.EventItemid[name][tostring(price)]
+			local chineseName = Mainfunction.Translationtable(name)
+			local ID = Scripttable.EventItemid[chineseName] and Scripttable.EventItemid[chineseName][tostring(price)]
 			Scripttable.GUI.EventShopTab.Select_ID = ID
 		end
 	end,
@@ -614,13 +617,24 @@ Scripttable.GUI.EventShopTab.EventsShopRadiobox = Scripttable.GUI.EventShopTab.E
 					return
 				end
 				Mainfunction.BuyShopItem("eventshop", "Checkbox")
-				task.wait(0.1)
+				task.wait(Scripttable.GUI.EventShopTab.BuyInterval)
 			end
 		end)
 	end,
 })
 
 -- 活動商店功能按鈕
+EventsShopContent:SliderFloat({
+	Label = "Buy Interval (sec)",
+	Value = 0.1,
+	Minimum = 0.1,
+	Maximum = 2.0,
+	Format = "%.1f sec",
+	Callback = function(_, value)
+		Scripttable.GUI.EventShopTab.BuyInterval = value
+	end,
+})
+
 local eventShopButtons = {"Refresh Time", "Buy Item"}
 for _, buttonText in ipairs(eventShopButtons) do
 	Scripttable.GUI.EventShopTab.EventShopTab_ROW:Button({
@@ -665,7 +679,8 @@ Scripttable.GUI.ArenaShopTab.EArenaShop_Key_Combo = ArenaShopContent:Combo({
 			if stock == "--" then
 				Scripttable.GUI.ArenaShopTab.ChoosenItem_Label.Text = "Selected: " .. name .. " | No Stock"
 			end
-			local ID = Scripttable.ArenaItemid[name] and Scripttable.ArenaItemid[name][tostring(price)]
+			local chineseName = Mainfunction.Translationtable(name)
+			local ID = Scripttable.ArenaItemid[chineseName] and Scripttable.ArenaItemid[chineseName][tostring(price)]
 			Scripttable.GUI.ArenaShopTab.Select_ID = ID
 		end
 	end,
@@ -684,7 +699,8 @@ Scripttable.GUI.ArenaShopTab.ArenaShop_Item_Combo = ArenaShopContent:Combo({
 			if stock == "--" then
 				Scripttable.GUI.ArenaShopTab.ChoosenItem_Label.Text = "Selected: " .. name .. " | No Stock"
 			end
-			local ID = Scripttable.ArenaItemid[name] and Scripttable.ArenaItemid[name][tostring(price)]
+			local chineseName = Mainfunction.Translationtable(name)
+			local ID = Scripttable.ArenaItemid[chineseName] and Scripttable.ArenaItemid[chineseName][tostring(price)]
 			Scripttable.GUI.ArenaShopTab.Select_ID = ID
 		end
 	end,
