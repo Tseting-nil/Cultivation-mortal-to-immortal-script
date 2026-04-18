@@ -1,7 +1,7 @@
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local HttpService = game:GetService("HttpService")
-local saveFilename = "Tsetingnil_script/Cultivation/Equip_cfg.json"
+local saveFilename = "Tsetingnil_script/Cultivation-Mortal-to-Immortal/Equip_cfg.json"
 
 -- 外部庫載入
 local ReGui = loadstring(game:HttpGet("https://gist.githubusercontent.com/Tseting-nil/169b7303e1418cb301bad5ab427e9351/raw/8dfc8c5dcb9d3ea611ce4a3b597ce01af27614a0/GUI:ReGui"))()
