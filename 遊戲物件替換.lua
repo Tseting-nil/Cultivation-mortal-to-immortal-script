@@ -256,12 +256,6 @@ local TaskConfig = {
   -- 動態數量任務
 	dynamic = {
 		{
-			name = "通行證獎勵",
-			path = {"商店","背景","右侧界面","月通行证","背景","奖励区","奖励列表"},
-			target = "月通行证奖励预制体",
-			prefix = "gamepassgift"
-		},
-		{
 			name = "郵件",
 			path = {"邮件","背景","邮件列表"},
 			target = "邮件",
