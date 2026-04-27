@@ -103,7 +103,7 @@ local Scripttable = {
 		["生命之水"] = {["300"] = 4},
   },
   -- 公會商店物品順序
-  GuildItemOrder = {"Talisman Summon Ticket", "Skill Summon Ticket", "Elixir", "Herb", "Gem", "Gold", "Ore Dungeon Keys", "Gem Dungeon Keys", "Rune Dungeon Keys", "Relic Dungeon Keys", "Gold Dungeon Keys", "Hover Dungeon Keys"},
+  GuildItemOrder = {"Talisman Summon Ticket", "Skill Summon Ticket", "Elixir", "Herb", "Gem", "Gold", "Wing Cores", "Ore Dungeon Keys", "Gem Dungeon Keys", "Rune Dungeon Keys", "Relic Dungeon Keys", "Gold Dungeon Keys", "Hover Dungeon Keys"},
 	Translationt = {
 		-- ===== 英文 → 中文 =====
 		["Ore Dungeon Keys"] = "礦石地下城鑰匙",
@@ -124,6 +124,7 @@ local Scripttable = {
 		["Random World Tree Decorations"] = "世界樹物品",
     ["Elixir"] = "藥品",
     ["Herb"] = "草藥",
+    ["Wing Cores"] = "羽核",
 		-- ===== 中文 → 英文 =====
 		["礦石地下城鑰匙"] = "Ore Dungeon Keys",
 		["靈石地下城鑰匙"] = "Gem Dungeon Keys",
@@ -143,6 +144,7 @@ local Scripttable = {
 		["世界樹物品"] = "Random World Tree Decorations",
     ["藥品"] = "Elixir",
     ["草藥"] = "Herb",
+    ["羽核"] = "Wing Cores",
 	},
 }
 
