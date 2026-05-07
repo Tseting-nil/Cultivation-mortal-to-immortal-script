@@ -80,7 +80,7 @@ end
 
 -- 單選 Radiobox 群組函數
 local function CreateRadioboxGroup(parent, title, count)
-	local displayTitle = (title == "劍") and "劍雕像" or title
+	local displayTitle = (title == "劍") and "劍雕像" or (title == "樹") and "世界樹" or title
 	local buttonTitle = title
 	parent:Separator({
 		Text = displayTitle
@@ -287,11 +287,11 @@ for i = 1, 5 do
 	})
 
     -- 裝備選項群組
-	GUI["EquipButtons" .. i] = CreateRadioboxGroup(content, "裝備", 3)
-	GUI["SkillButtons" .. i] = CreateRadioboxGroup(content, "技能", 3)
-	GUI["RelicButtons" .. i] = CreateRadioboxGroup(content, "遺物", 3)
-	GUI["RuneButtons" .. i] = CreateRadioboxGroup(content, "符文", 3)
-	GUI["TreeButtons" .. i] = CreateRadioboxGroup(content, "世界樹", 3)
+	GUI["EquipButtons" .. i] = CreateRadioboxGroup(content, "裝備", 6)
+	GUI["SkillButtons" .. i] = CreateRadioboxGroup(content, "技能", 6)
+	GUI["RelicButtons" .. i] = CreateRadioboxGroup(content, "遺物", 6)
+	GUI["RuneButtons" .. i] = CreateRadioboxGroup(content, "符文", 6)
+	GUI["TreeButtons" .. i] = CreateRadioboxGroup(content, "樹", 6)
 	GUI["SwordButtons" .. i] = CreateRadioboxGroup(content, "劍", 6)
 end
 
@@ -487,6 +487,8 @@ SettingsContent:Button({
 		end
 	end
 })
+
+
 
 -- 啟動時讀取配置
 LoadConfig()
