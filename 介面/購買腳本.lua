@@ -54,6 +54,7 @@ local Scripttable = {
 		GuildShopTab = {
       Enabled = false,
       Select = {
+        ["GuildShop_Buy"] = false,
         ["Talisman Summon Ticket"] = false,
         ["Skill Summon Ticket"] = false,
         ["Elixir"] = false,
@@ -190,6 +191,10 @@ Mainfunction.LoadGuildShopconfig = function()
         local component = Scripttable.GUI.GuildShopTab.ItemComponents[key]
         if component then
           component:SetValue(value)
+        else
+          if key == "GuildShop_Buy" then
+          Scripttable.GUI.GuildShopTab.GuildShopRadiobox:SetValue(value)
+          end
         end
       end
     end
@@ -425,7 +430,6 @@ Mainfunction.Buy_GuildShop_Item = function()
     end
   end
   Msg:Success("購買完成", 3)
-  Scripttable.GUI.GuildShopTab.GuildShopRadiobox:SetValue(false)
 end
 
 Mainfunction.Upd_Event_RefreshTime = function()
@@ -776,8 +780,10 @@ Scripttable.GUI.GuildShopTab.GuildShopRadiobox = Scripttable.GUI.GuildShopTab.Gu
   Value = false,
   Label = "購買商品",
   Callback = function(self, Value)
+    Scripttable.GUI.GuildShopTab.Select["GuildShop_Buy"] = Value
     if Value == true then
       Mainfunction.Buy_GuildShop_Item()
+      return
     end
   end,
 })
