@@ -185,21 +185,26 @@ Mainfunction.LoadGuildShopconfig = function()
     return HttpService:JSONDecode(fileContent)
   end)
   if success and result then
+    local pendingBuyValue = nil
     for key, value in pairs(result) do
       if Scripttable.GUI.GuildShopTab.Select[key] ~= nil then
         Scripttable.GUI.GuildShopTab.Select[key] = value
         local component = Scripttable.GUI.GuildShopTab.ItemComponents[key]
         if component then
           component:SetValue(value)
-        else
-          if key == "GuildShop_Buy" then
-            Scripttable.GUI.GuildShopTab.GuildShopRadiobox:SetValue(value)
-          end
+        elseif key == "GuildShop_Buy" then
+          pendingBuyValue = value
         end
       end
     end
+    if pendingBuyValue ~= nil then
+      task.spawn(function()
+        task.wait(0)
+        Scripttable.GUI.GuildShopTab.GuildShopRadiobox:SetValue(pendingBuyValue)
+      end)
+    end
   else
-    warn("Load failed: " .. tostring(result), 3)
+    warn("載入失敗: " .. tostring(result), 3)
   end
 end
 
