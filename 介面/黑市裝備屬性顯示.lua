@@ -2,17 +2,25 @@
     BlackMarketEquipTooltip.lua
     黑市裝備詞條 Tooltip
 
-    UI 結構：
-      腳本載入時、為每張卡片在 活动商品N.按钮 之下預建立 Tooltip Frame
-      Tooltip 用 UDim2 相對父層定位（卡片正上方）、不需手動算座標
+    UI 結構（CoreGui 版）：
+      不在遊戲自己的 UI 樹（GUI.二级界面.黑市商人...）底下建立任何元件、
+      避免遊戲作者用 GetChildren()/DescendantAdded 直接掃到我們塞的東西。
+
+      改為：
+        1. Hook 開啟事件（客户端UI.打开黑市商店）與 黑市商人.Visible 變化
+        2. 開啟時才在 gethui()/CoreGui 建立一個獨立 ScreenGui、把 Tooltip
+           與開關按鈕都建立在裡面
+        3. 每幀（RenderStepped）讀取原生卡片按鈕的 AbsolutePosition/
+           AbsoluteSize、把 CoreGui 裡的 Tooltip/按鈕座標同步過去（純讀取、
+           不寫入/不掛載到原生 UI）
+        4. 關閉時整個 ScreenGui :Destroy()，畫面上不留任何殘留物件
 
     互動：
-      開關按鈕「顯示裝備屬性」（位於 背景.提示 內、原 i 按鈕右側）：
-      toggle 所有裝備 Tooltip 顯示/隱藏
+      開關按鈕「顯示裝備屬性」：toggle 所有裝備 Tooltip 顯示/隱藏
 
-    UI 路徑：
+    UI 路徑（僅用來讀取座標、定位參考用，不掛載任何東西上去）：
       卡片：背景.列表.活动商品N.按钮
-      開關掛點：背景.提示
+      開關座標參考：背景.提示 內原本的 i 按鈕
 
     資料對應：var21_upvw["商品列表"][N]
 ]]
@@ -20,9 +28,13 @@
 -- ==================== 服務 ====================
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
--- ==================== UI 路徑 ====================
+-- CoreGui 容器：優先用 gethui()（executor 提供、更難被偵測），沒有就退回 CoreGui
+local CoreGuiTarget = (gethui and gethui()) or game:GetService("CoreGui")
+
+-- ==================== UI 路徑（僅讀取、不掛載任何自建物件） ====================
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local mainGui = PlayerGui:WaitForChild("GUI")
 local secondLayer = mainGui:WaitForChild("二级界面")
@@ -110,7 +122,7 @@ local constantMod   = require(ReplicatedStorage:WaitForChild("脚本模块"):Wai
 
 -- ==================== 常數 ====================
 local DEBUG = false                         -- ★ Debug 開關：true = 顯示原始係數（除錯用），false = 顯示實際數值（正式）
-local TOOLTIP_NAME = "_EquipTooltip"        -- 內嵌在 按钮 下的 Tooltip Frame Name
+local TOOLTIP_NAME = "_EquipTooltip"        -- CoreGui 內 Tooltip Frame Name
 local TOGGLE_BTN_NAME = "_EquipInfoToggle"  -- 開關按鈕 Name
 
 -- 品質 → 邊框/標題顏色（依遊戲實際配色，13 階）
@@ -133,7 +145,12 @@ local QUALITY_COLOR = {
 
 -- ==================== 狀態 ====================
 local currentProductList = nil  -- 當前 商品列表 引用
-local toggleEnabled = false     -- 開關狀態
+local toggleEnabled = false     -- 開關狀態（跨開關保留、只有面板不見）
+
+local overlayGui = nil          -- CoreGui 內、黑市開啟時才建立的 ScreenGui
+local renderConn = nil          -- RenderStepped 座標同步連線
+local trackedTooltips = {}      -- [slotIndex] = { frame=Frame, card=cardFrame, btn=按钮 }
+local toggleBtnObj = nil        -- { frame=btn, label=label, iButton=iButton }
 
 -- ==================== 工具函數 ====================
 
@@ -186,21 +203,39 @@ local function getSlot(slotIndex)
     return currentProductList[slotIndex]
 end
 
--- ==================== Tooltip Frame 建立（預建立、內嵌在 按钮 之下） ====================
+-- ==================== CoreGui 容器 ====================
 
--- 建立或取得卡片 button 之下的 Tooltip Frame
-local function ensureTooltipFrame(cardFrame)
+-- 建立黑市開啟期間專用的 ScreenGui（parent 到 gethui()/CoreGui，不掛在遊戲自己的 UI 樹下）
+local function createOverlayGui()
+    if overlayGui then return overlayGui end
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "_" .. tostring(math.random(100000, 999999))
+    gui.ResetOnSpawn = false
+    gui.IgnoreGuiInset = true -- 座標系跟 AbsolutePosition 對齊（不受頂部安全區偏移影響）
+    gui.DisplayOrder = 999
+    gui.Parent = CoreGuiTarget
+    overlayGui = gui
+    return gui
+end
+
+-- ==================== Tooltip Frame 建立（建立在 CoreGui 內、用座標同步跟著卡片走） ====================
+
+-- 在 overlayGui 內建立（或取得）某張卡片對應的 Tooltip Frame
+local function ensureTooltipFrame(cardFrame, slotIndex)
+    if not overlayGui then return nil end
+
+    local existing = trackedTooltips[slotIndex]
+    if existing and existing.frame and existing.frame.Parent then
+        return existing.frame
+    end
+
     local btn = cardFrame:FindFirstChild("按钮")
     if not btn then return nil end
 
-    local frame = btn:FindFirstChild(TOOLTIP_NAME)
-    if frame then return frame end
-
-    frame = Instance.new("Frame")
+    local frame = Instance.new("Frame")
     frame.Name = TOOLTIP_NAME
-    -- 相對父層定位：水平置中、Y=0.6 落在卡片中央偏下（蓋在圖示上）
+    -- 用絕對座標定位（每幀由 syncTooltipPosition 依卡片按鈕實際位置校正）
     frame.AnchorPoint = Vector2.new(0.5, 1)
-    frame.Position = UDim2.new(0.5, 0, 0.6, -6)
     frame.Size = UDim2.new(0, 200, 0, 0)
     frame.AutomaticSize = Enum.AutomaticSize.Y
     frame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
@@ -209,7 +244,7 @@ local function ensureTooltipFrame(cardFrame)
     frame.Visible = false
     frame.ZIndex = 100   -- 蓋過卡片內的其他元素
     frame.ClipsDescendants = false
-    frame.Parent = btn
+    frame.Parent = overlayGui
 
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
@@ -288,6 +323,9 @@ local function ensureTooltipFrame(cardFrame)
     attrList.SortOrder = Enum.SortOrder.LayoutOrder
     attrList.Padding = UDim.new(0, 2)
     attrList.Parent = attrContainer
+
+    local entry = { frame = frame, card = cardFrame, btn = btn }
+    trackedTooltips[slotIndex] = entry
 
     return frame
 end
@@ -400,20 +438,65 @@ local function fillTooltip(frame, slot)
     return true
 end
 
+-- ==================== 座標同步（每幀跟著原生 UI 走，只讀取不掛載） ====================
+
+local function syncTooltipPosition(entry)
+    local btn = entry.btn
+    if not btn or not btn.Parent then return end
+    local absPos = btn.AbsolutePosition
+    local absSize = btn.AbsoluteSize
+    -- 對應原本相對定位：AnchorPoint(0.5,1)、Position(0.5,0,0.6,-6)
+    local targetX = absPos.X + absSize.X * 0.5
+    local targetY = absPos.Y + absSize.Y * 0.6 - 6
+    entry.frame.Position = UDim2.fromOffset(targetX, targetY)
+end
+
+local function syncTogglePosition()
+    if not toggleBtnObj then return end
+    local btn = toggleBtnObj.frame
+    local iButton = toggleBtnObj.iButton
+
+    if iButton and iButton.Parent then
+        local absPos = iButton.AbsolutePosition
+        local absSize = iButton.AbsoluteSize
+        if absSize.X > 0 and absSize.Y > 0 then
+            btn.AnchorPoint = Vector2.new(0, 0)
+            btn.Size = UDim2.fromOffset(absSize.X + 120, absSize.Y)
+            btn.Position = UDim2.fromOffset(absPos.X + absSize.X + 8, absPos.Y)
+            return
+        end
+    end
+
+    -- 保險：找不到 i 按鈕時、跟著 提示 框的位置
+    local pAbsPos = promptFrame.AbsolutePosition
+    local pAbsSize = promptFrame.AbsoluteSize
+    btn.AnchorPoint = Vector2.new(0, 0.5)
+    btn.Size = UDim2.fromOffset(170, 50)
+    btn.Position = UDim2.fromOffset(pAbsPos.X + 60, pAbsPos.Y + pAbsSize.Y * 0.5)
+end
+
+local function syncAllPositions()
+    for _, entry in pairs(trackedTooltips) do
+        syncTooltipPosition(entry)
+    end
+    syncTogglePosition()
+end
+
 -- ==================== 顯示控制 ====================
 
--- 預先在每張卡片的 按钮 下建立 Tooltip Frame（不論 slot 內容）
+-- 預先在每張卡片建立 Tooltip Frame（不論 slot 內容）
 local function preBuildAllTooltips()
     for _, child in ipairs(productList:GetChildren()) do
-        if string.match(child.Name, "^活动商品(%d+)$") then
-            ensureTooltipFrame(child)
+        local idx = tonumber(string.match(child.Name, "^活动商品(%d+)$"))
+        if idx then
+            ensureTooltipFrame(child, idx)
         end
     end
 end
 
 -- 為某卡片填充內容、回傳 frame（已建立但可能不可見）
 local function refillCard(cardFrame, slotIndex)
-    local frame = ensureTooltipFrame(cardFrame)
+    local frame = ensureTooltipFrame(cardFrame, slotIndex)
     if not frame then return nil end
 
     local slot = getSlot(slotIndex)
@@ -444,10 +527,9 @@ end
 
 -- 套用某卡片的可見性（只看開關狀態）
 local function applyCardVisibility(cardFrame, slotIndex)
-    local btn = cardFrame:FindFirstChild("按钮")
-    if not btn then return end
-    local frame = btn:FindFirstChild(TOOLTIP_NAME)
-    if not frame then return end
+    local entry = trackedTooltips[slotIndex]
+    if not entry then return end
+    local frame = entry.frame
 
     -- 不是裝備 → 永遠不顯示
     if frame:GetAttribute("IsEquip") ~= true then
@@ -468,7 +550,7 @@ local function applyAllVisibility()
     end
 end
 
--- ==================== 開關按鈕（在 提示 內、原 i 按鈕右側） ====================
+-- ==================== 開關按鈕（建立在 CoreGui、座標跟著 提示 內原 i 按鈕） ====================
 
 -- 配色：跟原 i 按鈕同調的米色羊皮紙
 local COLOR_BG_OFF     = Color3.fromRGB(245, 233, 200) -- 米色（關閉）
@@ -478,53 +560,29 @@ local COLOR_TEXT_OFF   = Color3.fromRGB(120, 60, 60)   -- 深紅（關）
 local COLOR_TEXT_ON    = Color3.fromRGB(40, 90, 30)    -- 深綠（開）
 
 local function ensureToggleButton()
-    local btn = promptFrame:FindFirstChild(TOGGLE_BTN_NAME)
-    if btn then return btn end
+    if toggleBtnObj then return toggleBtnObj.frame end
+    if not overlayGui then return nil end
 
-    -- 找原本的 i 按鈕（提示框內第一個 GuiButton 子物件）取得參考尺寸
+    -- 找原本的 i 按鈕（提示框內第一個 GuiButton 子物件）當座標參考（只讀，不掛東西上去）
     local iButton
     for _, child in ipairs(promptFrame:GetChildren()) do
-        if child:IsA("GuiButton") and child.Name ~= TOGGLE_BTN_NAME then
+        if child:IsA("GuiButton") then
             iButton = child
             break
         end
     end
 
-    -- 預設參數（萬一找不到 i 按鈕當保險）
-    local btnSize = UDim2.new(0, 50, 0, 50)
-    local btnPosX, btnPosXScale = 60, 0
-    local btnPosY, btnPosYScale = 0, 0.5
-    local btnAnchor = Vector2.new(0, 0.5)
-
-    if iButton then
-        -- 用 i 按鈕的 AbsoluteSize 當基準大小
-        local refSize = iButton.AbsoluteSize
-        if refSize.X > 0 and refSize.Y > 0 then
-            btnSize = UDim2.new(0, refSize.X + 120 , 0, refSize.Y)
-        end
-        -- 計算 i 按鈕在父框內的相對位置（用於跟著它放右邊）
-        local iAbsPos = iButton.AbsolutePosition
-        local pAbsPos = promptFrame.AbsolutePosition
-        local relX = iAbsPos.X - pAbsPos.X
-        -- 放在 i 按鈕右側 8px
-        btnPosX = relX + refSize.X + 8
-        btnPosXScale = 0
-        btnPosY = iAbsPos.Y - pAbsPos.Y
-        btnPosYScale = 0
-        btnAnchor = Vector2.new(0, 0)
-    end
-
-    btn = Instance.new("TextButton")
+    local btn = Instance.new("TextButton")
     btn.Name = TOGGLE_BTN_NAME
-    btn.Size = btnSize
-    btn.AnchorPoint = btnAnchor
-    btn.Position = UDim2.new(btnPosXScale, btnPosX, btnPosYScale, btnPosY)
+    btn.AnchorPoint = Vector2.new(0, 0)
+    btn.Size = UDim2.fromOffset(170, 50)
+    btn.Position = UDim2.fromOffset(0, 0)
     btn.BackgroundColor3 = COLOR_BG_OFF
     btn.BorderSizePixel = 0
     btn.Text = "" -- 文字放在子 TextLabel 才能多行 + 正確置中
     btn.AutoButtonColor = true
     btn.ZIndex = 50
-    btn.Parent = promptFrame
+    btn.Parent = overlayGui
 
     -- 圓角配合厚邊
     local corner = Instance.new("UICorner")
@@ -547,13 +605,15 @@ local function ensureToggleButton()
     label.Position = UDim2.new(0, 2, 0, 2)
     label.Font = Enum.Font.GothamBold
     label.TextSize = 16
-    label.TextColor3 = COLOR_TEXT_OFF
-    label.Text = _t.toggleOff
+    label.TextColor3 = toggleEnabled and COLOR_TEXT_ON or COLOR_TEXT_OFF
+    label.Text = toggleEnabled and _t.toggleOn or _t.toggleOff
     label.TextXAlignment = Enum.TextXAlignment.Center
     label.TextYAlignment = Enum.TextYAlignment.Center
     label.TextScaled = false
     label.ZIndex = 51
     label.Parent = btn
+
+    btn.BackgroundColor3 = toggleEnabled and COLOR_BG_ON or COLOR_BG_OFF
 
     btn.Activated:Connect(function()
         toggleEnabled = not toggleEnabled
@@ -569,52 +629,13 @@ local function ensureToggleButton()
         applyAllVisibility()
     end)
 
+    toggleBtnObj = { frame = btn, label = label, iButton = iButton }
+    syncTogglePosition()
     return btn
 end
 
--- ==================== 後續新增卡片：預建 Tooltip + 填內容 ====================
+-- ==================== skill 階段 2：透過 connection upvalue 撈當前 var21_upvw ====================
 
-productList.ChildAdded:Connect(function(child)
-    local idx = tonumber(string.match(child.Name, "^活动商品(%d+)$"))
-    if idx then
-        task.wait(0.05)
-        ensureTooltipFrame(child)
-        refillCard(child, idx)
-        applyCardVisibility(child, idx)
-    end
-end)
-
--- ==================== 黑市開關連動 ====================
-
--- 黑市介面關閉時、隱藏所有 Tooltip（但保留 toggle 狀態，下次打開恢復）
-blackMarketUi:GetPropertyChangedSignal("Visible"):Connect(function()
-    if not blackMarketUi.Visible then
-        for _, child in ipairs(productList:GetChildren()) do
-            local btn = child:FindFirstChild("按钮")
-            if btn then
-                local frame = btn:FindFirstChild(TOOLTIP_NAME)
-                if frame then frame.Visible = false end
-            end
-        end
-    else
-        applyAllVisibility() -- 重新打開時恢復
-    end
-end)
-
--- ==================== 資料同步 ====================
-
-syncBlackMarketDataEvent.OnClientEvent:Connect(function(blackMarketData)
-    if type(blackMarketData) == "table"
-       and type(blackMarketData["商品列表"]) == "table" then
-        currentProductList = blackMarketData["商品列表"]
-        task.defer(function()
-            refillAll()
-            applyAllVisibility()
-        end)
-    end
-end)
-
--- skill 階段 2：透過 connection upvalue 撈當前 var21_upvw
 local function findCurrentBlackMarketData()
     if not getconnections then return nil end
     local getUp = (debug and debug.getupvalue) or getupvalue
@@ -637,28 +658,83 @@ local function findCurrentBlackMarketData()
     return nil
 end
 
-openBlackMarketEvent.Event:Connect(function()
-    task.wait(0.1)
+-- ==================== CoreGui UI 生命週期（開啟事件建立、關閉銷毀） ====================
+
+-- 黑市開啟：在 CoreGui 建立本次的 UI、開始座標同步、灌入資料
+local function openOverlay()
+    if overlayGui then return end -- 已經開著
+
+    createOverlayGui()
+    ensureToggleButton()
+    preBuildAllTooltips()
+
+    renderConn = RunService.RenderStepped:Connect(syncAllPositions)
+
     local data = findCurrentBlackMarketData()
     if data then
         currentProductList = data["商品列表"]
-        refillAll()
-        applyAllVisibility()
+    end
+    refillAll()
+    applyAllVisibility()
+end
+
+-- 黑市關閉：整個 ScreenGui 銷毀、畫面上不留任何殘留物件（toggleEnabled 狀態保留、下次打開恢復）
+local function closeOverlay()
+    if renderConn then
+        renderConn:Disconnect()
+        renderConn = nil
+    end
+    if overlayGui then
+        overlayGui:Destroy()
+        overlayGui = nil
+    end
+    trackedTooltips = {}
+    toggleBtnObj = nil
+end
+
+-- 後續新增卡片（黑市開啟期間）：補建 Tooltip + 填內容
+productList.ChildAdded:Connect(function(child)
+    local idx = tonumber(string.match(child.Name, "^活动商品(%d+)$"))
+    if idx and overlayGui then
+        task.wait(0.05)
+        refillCard(child, idx)
+        applyCardVisibility(child, idx)
     end
 end)
 
--- ==================== 啟動 ====================
-
-ensureToggleButton()
-preBuildAllTooltips() -- 預先為現有卡片建立 Tooltip Frame
-
-do
-    local data = findCurrentBlackMarketData()
-    if data then
-        currentProductList = data["商品列表"]
-        refillAll()
-        applyAllVisibility()
+-- 黑市介面開關連動：Visible 變化直接決定 CoreGui UI 的建立/銷毀
+blackMarketUi:GetPropertyChangedSignal("Visible"):Connect(function()
+    if blackMarketUi.Visible then
+        openOverlay()
+    else
+        closeOverlay()
     end
+end)
+
+-- 資料同步：黑市開啟期間才需要即時重繪
+syncBlackMarketDataEvent.OnClientEvent:Connect(function(blackMarketData)
+    if type(blackMarketData) == "table"
+       and type(blackMarketData["商品列表"]) == "table" then
+        currentProductList = blackMarketData["商品列表"]
+        if overlayGui then
+            task.defer(function()
+                refillAll()
+                applyAllVisibility()
+            end)
+        end
+    end
+end)
+
+-- Hook「打开黑市商店」事件：這是真正觸發 CoreGui UI 建立的地方
+openBlackMarketEvent.Event:Connect(function()
+    task.wait(0.1)
+    openOverlay()
+end)
+
+-- ==================== 啟動 ====================
+-- 腳本載入當下不建立任何 UI；若中途注入時黑市剛好已開著，補開一次
+if blackMarketUi.Visible then
+    openOverlay()
 end
 
 print("[BlackMarketEquipTooltip] loaded")
